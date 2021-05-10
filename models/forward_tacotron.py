@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 from numba.core.config import reload_config
+from torch.nn import Embedding
 
 from models.common_layers import CBHG
 from utils.files import read_config
@@ -45,10 +46,11 @@ class LengthRegulator(nn.Module):
 
 class SeriesPredictor(nn.Module):
 
-    def __init__(self, in_dims, conv_dims=256, rnn_dims=64, dropout=0.5):
+    def __init__(self, num_chars, emb_dim=64, conv_dims=256, rnn_dims=64, dropout=0.5):
         super().__init__()
+        self.embedding = Embedding(num_chars, emb_dim)
         self.convs = torch.nn.ModuleList([
-            BatchNormConv(in_dims, conv_dims, 5, activation=torch.relu),
+            BatchNormConv(emb_dim, conv_dims, 5, activation=torch.relu),
             BatchNormConv(conv_dims, conv_dims, 5, activation=torch.relu),
             BatchNormConv(conv_dims, conv_dims, 5, activation=torch.relu),
         ])
@@ -57,6 +59,7 @@ class SeriesPredictor(nn.Module):
         self.dropout = dropout
 
     def forward(self, x, alpha=1.0):
+        x = self.embedding(x)
         x = x.transpose(1, 2)
         for conv in self.convs:
             x = conv(x)
@@ -108,6 +111,7 @@ class ForwardTacotron(nn.Module):
 
     def __init__(self,
                  embed_dims: int,
+                 series_embed_dims: int,
                  num_chars: int,
                  durpred_conv_dims: int,
                  durpred_rnn_dims: int,
@@ -129,11 +133,11 @@ class ForwardTacotron(nn.Module):
         self.rnn_dims = rnn_dims
         self.embedding = nn.Embedding(num_chars, embed_dims)
         self.lr = LengthRegulator()
-        self.dur_pred = SeriesPredictor(embed_dims,
+        self.dur_pred = SeriesPredictor(num_chars,
                                         conv_dims=durpred_conv_dims,
                                         rnn_dims=durpred_rnn_dims,
                                         dropout=durpred_dropout)
-        self.pitch_pred = SeriesPredictor(embed_dims,
+        self.pitch_pred = SeriesPredictor(num_chars,
                                           conv_dims=pitch_conv_dims,
                                           rnn_dims=pitch_rnn_dims,
                                           dropout=pitch_dropout)
@@ -171,11 +175,11 @@ class ForwardTacotron(nn.Module):
         if self.training:
             self.step += 1
 
-        x = self.embedding(x)
         dur_hat = self.dur_pred(x).squeeze()
         pitch_hat = self.pitch_pred(x).transpose(1, 2)
         pitch = pitch.unsqueeze(1)
 
+        x = self.embedding(x)
         x = x.transpose(1, 2)
         x = self.prenet(x)
 
@@ -212,13 +216,13 @@ class ForwardTacotron(nn.Module):
                  pitch_function: Callable[[torch.tensor], torch.tensor] = lambda x: x) -> tuple:
         self.eval()
 
-        x = self.embedding(x)
         dur = self.dur_pred(x, alpha=alpha)
         dur = dur.squeeze(2)
 
         pitch_hat = self.pitch_pred(x).transpose(1, 2)
         pitch_hat = pitch_function(pitch_hat)
 
+        x = self.embedding(x)
         x = x.transpose(1, 2)
         x = self.prenet(x)
 

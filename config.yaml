@@ -1,6 +1,6 @@
 
-voc_model_id: 'ljspeech_voc'
-tts_model_id: 'ljspeech_tts'
+voc_model_id: 'ljspeech_sep_voc'
+tts_model_id: 'ljspeech_sep_tts'
 
 data_path: 'data/' # output data path
 
@@ -106,7 +106,8 @@ tacotron:
 forward_tacotron:
 
   model:
-    embed_dims: 256             # embedding dimension for the graphemes/phoneme inputs
+    embed_dims: 64             # embedding dimension for the graphemes/phoneme inputs
+    series_embed_dims: 64
     prenet_dims: 256
     postnet_dims: 256
     durpred_conv_dims: 256
