@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from models.forward_tacotron import ForwardTacotron
-from trainer.common import Averager, TTSSession, MaskedL1, to_device, np_now
+from trainer.common import Averager, TTSSession, MaskedL1, to_device, np_now, MaskedL2
 from utils.checkpoints import  save_checkpoint
 from utils.dataset import get_tts_datasets
 from utils.decorators import ignore_exception
@@ -29,6 +29,7 @@ class ForwardTrainer:
         self.train_cfg = config['forward_tacotron']['training']
         self.writer = SummaryWriter(log_dir=paths.forward_log, comment='v1')
         self.l1_loss = MaskedL1()
+        self.l2_loss = MaskedL2()
 
     def train(self, model: ForwardTacotron, optimizer: Optimizer) -> None:
         forward_schedule = self.train_cfg['schedule']
@@ -73,8 +74,8 @@ class ForwardTrainer:
 
                 pred = model(batch)
 
-                m1_loss = self.l1_loss(pred['mel'], batch['mel'], batch['mel_len'])
-                m2_loss = self.l1_loss(pred['mel_post'], batch['mel'], batch['mel_len'])
+                m1_loss = self.l2_loss(pred['mel'], batch['mel'], batch['mel_len'])
+                m2_loss = self.l2_loss(pred['mel_post'], batch['mel'], batch['mel_len'])
 
                 dur_loss = self.l1_loss(pred['dur'].unsqueeze(1), batch['dur'].unsqueeze(1), batch['x_len'])
                 pitch_loss = self.l1_loss(pred['pitch'], batch['pitch'].unsqueeze(1), batch['x_len'])
@@ -144,8 +145,8 @@ class ForwardTrainer:
             batch = to_device(batch, device=device)
             with torch.no_grad():
                 pred = model(batch)
-                m1_loss = self.l1_loss(pred['mel'], batch['mel'], batch['mel_len'])
-                m2_loss = self.l1_loss(pred['mel_post'], batch['mel'], batch['mel_len'])
+                m1_loss = self.l2_loss(pred['mel'], batch['mel'], batch['mel_len'])
+                m2_loss = self.l2_loss(pred['mel_post'], batch['mel'], batch['mel_len'])
                 dur_loss = self.l1_loss(pred['dur'].unsqueeze(1), batch['dur'].unsqueeze(1), batch['x_len'])
                 pitch_loss = self.l1_loss(pred['pitch'], batch['pitch'].unsqueeze(1), batch['x_len'])
                 energy_loss = self.l1_loss(pred['energy'], batch['energy'].unsqueeze(1), batch['x_len'])
