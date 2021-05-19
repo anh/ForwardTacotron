@@ -17,9 +17,10 @@ _suprasegmentals = 'ˈˌːˑ'
 _other_symbols = 'ʍwɥʜʢʡɕʑɺɧ'
 _diacrilics = 'ɚ˞ɫ'
 _extra_phons = ['g', 'ɝ', '̃', '̍', '̥', '̩', '̯', '͡']  # some extra symbols that I found in from wiktionary ipa annotations
+_tones_marks = list("0123456789")
 
 phonemes = list(
    _pad + _punctuation + _special + _vowels + _non_pulmonic_consonants
-   + _pulmonic_consonants + _suprasegmentals + _other_symbols + _diacrilics) + _extra_phons
+   + _pulmonic_consonants + _suprasegmentals + _other_symbols + _diacrilics) + _extra_phons + _tones_marks
 
 phonemes_set = set(phonemes)
